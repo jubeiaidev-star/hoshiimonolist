@@ -601,14 +601,35 @@
       }
     }
 
-    exportBtn.addEventListener('click', () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `wishlist_backup_${new Date().toISOString().slice(0,10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+    exportBtn.addEventListener('click', async () => {
+      try {
+        const jsonStr = JSON.stringify(items, null, 2);
+        const fileName = `wishlist_backup_${new Date().toISOString().slice(0,10)}.json`;
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const file = new File([blob], fileName, { type: 'application/json' });
+
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: '欲しいものリスト バックアップ',
+          });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.href = url;
+          downloadAnchor.download = fileName;
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          alert('ファイルの保存・共有処理中にエラーが発生しました。');
+        }
+      }
     });
 
     importBtn.addEventListener('click', () => {
